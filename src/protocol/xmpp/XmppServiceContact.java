@@ -417,6 +417,12 @@ public class XmppServiceContact extends XmppContact {
         return !isPrivate;
     }
 
+    //iha08 Start
+    public String getJid(String nick) {
+        return Jid.realJidToSawimJid(getUserId() + "/" + nick);
+    }
+    //iha08 End
+
     public void activate(BaseActivity activity, Protocol p) {
         if (isOnline() || isPrivate || hasChat()) {
             super.activate(activity, p);

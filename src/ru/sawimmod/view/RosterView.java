@@ -274,7 +274,11 @@ public class RosterView extends Fragment implements ListView.OnItemClickListener
                         }
                     }.show(getFragmentManager().beginTransaction(), "auth");
                 } else {
-                    openChat(current.getProtocol(), current.getContact(), null);
+                    try {
+                        openChat(current.getProtocol(), current.getContact(), null);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     getActivity().supportInvalidateOptionsMenu();
                     updateRoster();
                 }
@@ -360,7 +364,7 @@ public class RosterView extends Fragment implements ListView.OnItemClickListener
         return (RosterAdapter) rosterListView.getAdapter();
     }
 
-    private void openChat(Protocol p, Contact c, String sharingText) {
+    private void openChat(Protocol p, Contact c, String sharingText) throws InterruptedException {
         c.activate((BaseActivity) getActivity(), p);
         if (SawimApplication.isManyPane()) {
             ChatView chatViewTablet = (ChatView) getActivity().getSupportFragmentManager()
@@ -382,7 +386,7 @@ public class RosterView extends Fragment implements ListView.OnItemClickListener
         }
     }
 
-    private void sharing(Protocol p, Contact c) {
+    private void sharing(Protocol p, Contact c) throws InterruptedException {
         Intent intent = getActivity().getIntent();
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         String type = intent.getType();
@@ -412,12 +416,20 @@ public class RosterView extends Fragment implements ListView.OnItemClickListener
                 Object o = getRosterAdapter().getItem(position);
                 if (o instanceof Chat) {
                     Chat chat = (Chat) o;
-                    sharing(chat.getProtocol(), chat.getContact());
+                    try {
+                        sharing(chat.getProtocol(), chat.getContact());
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             } else {
                 TreeNode item = (TreeNode) getRosterAdapter().getItem(position);
                 if (item.getType() == TreeNode.CONTACT) {
-                    sharing(((Contact) item).getProtocol(), (Contact) item);
+                    try {
+                        sharing(((Contact) item).getProtocol(), (Contact) item);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         } else {
@@ -425,14 +437,22 @@ public class RosterView extends Fragment implements ListView.OnItemClickListener
                 Object o = getRosterAdapter().getItem(position);
                 if (o instanceof Chat) {
                     Chat chat = (Chat) o;
-                    openChat(chat.getProtocol(), chat.getContact(), null);
+                    try {
+                        openChat(chat.getProtocol(), chat.getContact(), null);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     if (SawimApplication.isManyPane())
                         update();
                 }
             } else {
                 TreeNode item = (TreeNode) getRosterAdapter().getItem(position);
                 if (item.getType() == TreeNode.CONTACT) {
-                    openChat(((Contact) item).getProtocol(), ((Contact) item), null);
+                    try {
+                        openChat(((Contact) item).getProtocol(), ((Contact) item), null);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     if (SawimApplication.isManyPane())
                         update();
                 }

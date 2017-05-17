@@ -82,7 +82,11 @@ public class JuickMenu implements DialogInterface.OnClickListener {
                 Chat chat = chatView.getCurrentChat();
                 chatView.pause(chat);
                 if (currentProtocol != null) {
-                    chatView.openChat(currentProtocol, currentProtocol.getItemByUID("juick@juick.com"));
+                    try {
+                        chatView.openChat(currentProtocol, currentProtocol.getItemByUID("juick@juick.com"));
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     chatView.resume(chatView.getCurrentChat());
                 }
             }

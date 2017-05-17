@@ -34,6 +34,10 @@ public final class XmppConnection extends ClientConnection {
 
     public static final boolean DEBUGLOG = false;
     private static final int MESSAGE_COUNT_AFTER_CONNECT = 20;
+    //iha05 Start
+    public XmlNode vCardAvatar;
+    public boolean loadAvatar = false;
+    //iha05 End
 
     private Socket socket;
     private Xmpp protocol;
@@ -154,6 +158,20 @@ public final class XmppConnection extends ClientConnection {
 
     public XmppConnection() {
     }
+
+    //iha04 Start
+    public XmlNode getAvatar(String jid, int i) throws InterruptedException {
+        setLoadAvatar(true);
+        putPacketIntoQueue("<iq type='get' to='" + Util.xmlEscape(jid) + "' id='"
+                + Util.xmlEscape(generateId(S_VCARD)) + "_" + (i + 1) + "'>"
+                + "<vCard xmlns='vcard-temp' version='2.0' prodid='-/"
+                + "/HandGen/" + "/NONSGML vGen v1.0/" + "/EN'/>"
+                + "</iq>");
+
+        return vCardAvatar;
+    }
+    //iha04 End
+
 
     public void setXmpp(Xmpp xmpp) {
         protocol = xmpp;
@@ -908,6 +926,8 @@ public final class XmppConnection extends ClientConnection {
 
         } else if (S_VCARD.equals(queryName)) {
             if (IQ_TYPE_RESULT == iqType) {
+                String vCardId = iq.getAttribute("id");
+                if ((vCardId.contains((CharSequence)"_"))) iqQuery.setValue("id",vCardId.split("_",2)[1]); //iha08
                 loadVCard(iqQuery, from);
             }
             return;
@@ -1009,75 +1029,108 @@ public final class XmppConnection extends ClientConnection {
         putPacketIntoQueue(packet.toString());
     }
 
-    private void loadVCard(XmlNode vCard, String from) {
-        UserInfo userInfo = singleUserInfo;
-        if ((null == userInfo) || !from.equals(userInfo.realUin)) {
-            return;
-        }
-        userInfo.auth = false;
-        userInfo.uin = from;
-        if (Jid.isConference(from)) {
-            Contact c = getXmpp().getItemByUID(Jid.getBareJid(from));
-            if (c instanceof XmppServiceContact) {
+    //iha05 Start
+    public void setLoadAvatar(boolean inp) {
+        loadAvatar = inp;
+    }
+    //iha05iha
+
+    private void loadVCard(XmlNode vCard, String from) {//iha05 Start
+        String vCardId = "";
+        boolean flag = false;
+
+        if (vCard.contains("id"))
+            vCardId = vCard.getFirstNode("id").value;
+
+        if (!(vCardId.isEmpty())) flag = true;
+        if (!vCardId.contains((CharSequence) "0") && (vCardId.length() == 1)) flag = true;
+
+        if (flag) {
+            int vCardIdInt = 0;
+            try {
+                vCardIdInt = Integer.parseInt(vCardId) - 1;
+            } catch (Exception e) {}
+
+            XmlNode bs64photo = vCard.getFirstNode("PHOTO");
+            bs64photo = (null == bs64photo) ? null : bs64photo.getFirstNode("BINVAL");
+
+            if (null != bs64photo) {
+                Contact c = getXmpp().getItemByUID(Jid.getBareJid(from));
                 XmppContact.SubContact sc = ((XmppServiceContact) c).getExistSubContact(Jid.getResource(from, null));
-                if ((null != sc) && (null != sc.realJid)) {
-                    userInfo.uin = sc.realJid;
+                sc.avatar = bs64photo.getBinValue();
+            }
+            loadAvatar = false;
+        } else {
+        //iha05 End
+            UserInfo userInfo = singleUserInfo;
+            if ((null == userInfo) || !from.equals(userInfo.realUin)) {
+                return;
+            }
+            userInfo.auth = false;
+            userInfo.uin = from;
+            if (Jid.isConference(from)) {
+                Contact c = getXmpp().getItemByUID(Jid.getBareJid(from));
+                if (c instanceof XmppServiceContact) {
+                    XmppContact.SubContact sc = ((XmppServiceContact) c).getExistSubContact(Jid.getResource(from, null));
+                    if ((null != sc) && (null != sc.realJid)) {
+                        userInfo.uin = sc.realJid;
+                    }
                 }
             }
-        }
-        if (null == vCard) {
+            if (null == vCard) {
+                userInfo.updateProfileView();
+                singleUserInfo = null;
+                return;
+            }
+            String name[] = new String[3];
+            name[0] = vCard.getFirstNodeValue("N", "GIVEN");
+            name[1] = vCard.getFirstNodeValue("N", "MIDDLE");
+            name[2] = vCard.getFirstNodeValue("N", "FAMILY");
+            if (StringConvertor.isEmpty(Util.implode(name, ""))) {
+                userInfo.firstName = vCard.getFirstNodeValue("FN");
+                userInfo.lastName = null;
+            } else {
+                userInfo.lastName = name[2];
+                name[2] = null;
+                userInfo.firstName = Util.implode(name, " ");
+            }
+            userInfo.xmpp_gender = vCard.getFirstNodeValue("GENDER");
+            userInfo.nick = vCard.getFirstNodeValue("NICKNAME");
+            userInfo.birthDay = vCard.getFirstNodeValue("BDAY");
+            userInfo.contactjid = vCard.getFirstNodeValue("JABBERID");
+            userInfo.email = vCard.getFirstNodeValue("EMAIL", new String[]{"INTERNET"}, "USERID", true);
+            userInfo.about = vCard.getFirstNodeValue("DESC");
+            userInfo.homePage = vCard.getFirstNodeValue("URL");
+
+            userInfo.homeAddress = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "STREET", true);
+            userInfo.homeExtended = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "EXTADR", true);
+            userInfo.homeCity = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "LOCALITY", true);
+            userInfo.homeState = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "REGION", true);
+            userInfo.homePostal = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "PCODE", true);
+            userInfo.homeCountry = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "CTRY", true);
+            userInfo.cellPhone = vCard.getFirstNodeValue("TEL", new String[]{"HOME", "VOICE"}, "NUMBER", true);
+
+            userInfo.workCompany = vCard.getFirstNodeValue("ORG", null, "ORGNAME");
+            userInfo.workDepartment = vCard.getFirstNodeValue("ORG", null, "ORGUNIT");
+            userInfo.workPosition = vCard.getFirstNodeValue("TITLE");
+            userInfo.workPhone = vCard.getFirstNodeValue("TEL", new String[]{"WORK", "VOICE"}, "NUMBER");
+
+            if (!Jid.isGate(from)) {
+                userInfo.setOptimalName();
+            }
+            if (userInfo.isEditable()) {
+                userInfo.vCard = vCard;
+            }
             userInfo.updateProfileView();
+
+            XmlNode bs64photo = vCard.getFirstNode("PHOTO");
+            bs64photo = (null == bs64photo) ? null : bs64photo.getFirstNode("BINVAL");
+            if (null != bs64photo) {
+                new Thread(new AvatarLoader(userInfo, bs64photo), "XMPPAvatarLoad").start();
+            }
+            bs64photo = null;
             singleUserInfo = null;
-            return;
-        }
-        String name[] = new String[3];
-        name[0] = vCard.getFirstNodeValue("N", "GIVEN");
-        name[1] = vCard.getFirstNodeValue("N", "MIDDLE");
-        name[2] = vCard.getFirstNodeValue("N", "FAMILY");
-        if (StringConvertor.isEmpty(Util.implode(name, ""))) {
-            userInfo.firstName = vCard.getFirstNodeValue("FN");
-            userInfo.lastName = null;
-        } else {
-            userInfo.lastName = name[2];
-            name[2] = null;
-            userInfo.firstName = Util.implode(name, " ");
-        }
-        userInfo.xmpp_gender = vCard.getFirstNodeValue("GENDER");
-        userInfo.nick = vCard.getFirstNodeValue("NICKNAME");
-        userInfo.birthDay = vCard.getFirstNodeValue("BDAY");
-        userInfo.contactjid = vCard.getFirstNodeValue("JABBERID");
-        userInfo.email = vCard.getFirstNodeValue("EMAIL", new String[]{"INTERNET"}, "USERID", true);
-        userInfo.about = vCard.getFirstNodeValue("DESC");
-        userInfo.homePage = vCard.getFirstNodeValue("URL");
-
-        userInfo.homeAddress = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "STREET", true);
-        userInfo.homeExtended = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "EXTADR", true);
-        userInfo.homeCity = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "LOCALITY", true);
-        userInfo.homeState = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "REGION", true);
-        userInfo.homePostal = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "PCODE", true);
-        userInfo.homeCountry = vCard.getFirstNodeValue("ADR", new String[]{"HOME"}, "CTRY", true);
-        userInfo.cellPhone = vCard.getFirstNodeValue("TEL", new String[]{"HOME", "VOICE"}, "NUMBER", true);
-
-        userInfo.workCompany = vCard.getFirstNodeValue("ORG", null, "ORGNAME");
-        userInfo.workDepartment = vCard.getFirstNodeValue("ORG", null, "ORGUNIT");
-        userInfo.workPosition = vCard.getFirstNodeValue("TITLE");
-        userInfo.workPhone = vCard.getFirstNodeValue("TEL", new String[]{"WORK", "VOICE"}, "NUMBER");
-
-        if (!Jid.isGate(from)) {
-            userInfo.setOptimalName();
-        }
-        if (userInfo.isEditable()) {
-            userInfo.vCard = vCard;
-        }
-        userInfo.updateProfileView();
-
-        XmlNode bs64photo = vCard.getFirstNode("PHOTO");
-        bs64photo = (null == bs64photo) ? null : bs64photo.getFirstNode("BINVAL");
-        if (null != bs64photo) {
-            new Thread(new AvatarLoader(userInfo, bs64photo),"XMPPAvatarLoad").start();
-        }
-        bs64photo = null;
-        singleUserInfo = null;
+        } //iha05
     }
 
     private void loadBookmarks(XmlNode storage) {

@@ -16,15 +16,23 @@ def mtmProject = project(':deps:mtm')
 
 dependencies {
     compile mtmProject
-    compile 'com.android.support:support-v4:19+'
+    //compile 'com.android.support:support-v4:19+'
     compile 'com.android.support:appcompat-v7:19+'
 }
 
 android {
+    signingConfigs {
+        config {
+            keyAlias 'key1'
+            keyPassword 'Smile1976'
+            storeFile file('C:/TOOLS/Android/Keys/iha_key.jks')
+            storePassword 'Smile1976'
+        }
+    }
     compileSdkVersion 19
     buildToolsVersion "19.1"
     defaultConfig {
-        minSdkVersion 9
+        minSdkVersion 19
         targetSdkVersion 19
     }
     lintOptions {
@@ -80,6 +88,17 @@ android {
                 proguardFile file('proguard-android.txt')
                 signingConfig signingConfigs.sawim
             }
+        }
+    }
+    productFlavors {
+    }
+    buildTypes {
+        debug {
+            debuggable true
+            signingConfig signingConfigs.config
+        }
+        release {
+            signingConfig signingConfigs.config
         }
     }
 }

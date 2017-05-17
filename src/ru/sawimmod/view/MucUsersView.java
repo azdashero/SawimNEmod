@@ -34,7 +34,7 @@ public class MucUsersView implements TextBoxView.TextBoxListener {
         this.xmppServiceContact = xmppServiceContact;
     }
 
-    public void show(final ChatView chatView, ListView nickList) {
+    public void show(final ChatView chatView, ListView nickList) throws InterruptedException {
         final BaseActivity activity = (BaseActivity) chatView.getActivity();
         usersAdapter.init((Xmpp) protocol, xmppServiceContact);
         nickList.setAdapter(usersAdapter);
@@ -83,7 +83,11 @@ public class MucUsersView implements TextBoxView.TextBoxListener {
                                     protocol.addTempContact(c);
                                 }
                                 chatView.pause(chatView.getCurrentChat());
-                                chatView.openChat(protocol, c);
+                                try {
+                                    chatView.openChat(protocol, c);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
                                 chatView.resume(chatView.getCurrentChat());
                                 activity.supportInvalidateOptionsMenu();
                                 break;
@@ -262,7 +266,7 @@ public class MucUsersView implements TextBoxView.TextBoxListener {
         }
     }
 
-    public void update() {
+    public void update() throws InterruptedException {
         if (usersAdapter != null) {
             usersAdapter.update();
             usersAdapter.notifyDataSetChanged();

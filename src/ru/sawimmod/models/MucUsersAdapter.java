@@ -1,10 +1,14 @@
 package ru.sawimmod.models;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+
+import protocol.Contact;
 import protocol.xmpp.Xmpp;
 import protocol.xmpp.XmppContact;
 import protocol.xmpp.XmppServiceContact;
@@ -36,17 +40,34 @@ public class MucUsersAdapter extends BaseAdapter {
     private List<Object> items = new ArrayList<Object>();
     private Xmpp protocol;
 
-    public void init(Xmpp xmpp, XmppServiceContact conf) {
+    public void init(Xmpp xmpp, XmppServiceContact conf) throws InterruptedException {
         protocol = xmpp;
         conference = conf;
         update();
     }
 
-    public void update() {
+    public synchronized void update() throws InterruptedException {
         items.clear();
         final int moderators = getContactCount(XmppServiceContact.ROLE_MODERATOR);
         final int participants = getContactCount(XmppServiceContact.ROLE_PARTICIPANT);
         final int visitors = getContactCount(XmppServiceContact.ROLE_VISITOR);
+
+        //iha03
+        Vector<XmppContact.SubContact> subcontacts = conference.subcontacts;
+        try {
+            for (int i = 0; i < subcontacts.size(); ++i) {
+                XmppContact.SubContact contact = subcontacts.elementAt(i);
+                Contact personal = protocol.createTempContact(conference.getJid(contact.resource));
+                String realJid = personal.getUserId();
+
+                if (!contact.avatarIsRead) {
+                    protocol.getConnection().getAvatar(realJid,i);
+                }
+            }
+        } catch (Exception e){
+
+        }
+        //iha03 End
 
         addLayerToListOfSubcontacts(R.string.list_of_moderators, moderators, XmppServiceContact.ROLE_MODERATOR);
         addLayerToListOfSubcontacts(R.string.list_of_participants, participants, XmppServiceContact.ROLE_PARTICIPANT);
@@ -221,5 +242,23 @@ public class MucUsersAdapter extends BaseAdapter {
             rosterItemView.itemFifthImage = ic.getImage().getBitmap();
         }
         rosterItemView.itemFourthImage = SawimResources.affiliationIcons.iconAt(XmppServiceContact.getAffiliationName(c.priorityA)).getImage().getBitmap();
+
+        //iha02 Start
+        if (!c.avatarIsRead) {
+            c.avatarIsRead = true;
+        }
+
+        if (c.avatar == null) {
+            rosterItemView.itemFirstImage = protocol.getStatusInfo().getIcon(c.status).getImage().getBitmap();
+        } else {
+            rosterItemView.itemFirstImage = Bitmap.createScaledBitmap(
+                    BitmapFactory.decodeByteArray(c.avatar, 0, c.avatar.length),
+                    40,
+                    40,
+                    false
+            );
+        }
+        //iha02 End
+
     }
 }

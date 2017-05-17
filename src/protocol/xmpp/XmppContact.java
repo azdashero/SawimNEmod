@@ -157,10 +157,13 @@ public class XmppContact extends Contact {
     }
 
     public static class SubContact {
+        public byte[] avatar;
         public String resource;
         public String statusText;
         public String roleText;
         public String realJid;
+        public boolean avatarIsRead = false;
+
 
         public short client = ClientInfo.CLI_NONE;
 

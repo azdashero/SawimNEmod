@@ -83,7 +83,7 @@ public class SawimActivity extends BaseActivity {
         setIntent(intent);
     }
 
-    private void handleIntent() {
+    private void handleIntent() throws InterruptedException {
         if (getIntent() == null || getIntent().getAction() == null) return;
         if (getIntent().getAction().startsWith(Intent.ACTION_SEND)) {
             FragmentManager fm = getSupportFragmentManager();
@@ -111,7 +111,7 @@ public class SawimActivity extends BaseActivity {
         setIntent(null);
     }
 
-    public boolean openChat(Protocol p, Contact c, boolean allowingStateLoss) {
+    public boolean openChat(Protocol p, Contact c, boolean allowingStateLoss) throws InterruptedException {
         FragmentManager fragmentManager = getSupportFragmentManager();
         ChatView chatView = (ChatView) fragmentManager.findFragmentById(R.id.chat_fragment);
         if (chatView == null) {
@@ -182,8 +182,16 @@ public class SawimActivity extends BaseActivity {
             if (startWindowView != null)
                 fragmentManager.popBackStack();
         }
-        handleIntent();
-        if (!isOpenNewChat && SawimApplication.isManyPane()) openChat(null, null, true);
+        try {
+            handleIntent();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (!isOpenNewChat && SawimApplication.isManyPane()) try {
+            openChat(null, null, true);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

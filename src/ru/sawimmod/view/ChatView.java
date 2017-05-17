@@ -62,6 +62,8 @@ import ru.sawimmod.Options;
 import ru.sawimmod.SawimApplication;
 import ru.sawimmod.SawimResources;
 import ru.sawimmod.Scheme;
+import java.util.Vector;
+import protocol.xmpp.XmppContact;
 
 /**
  * Created with IntelliJ IDEA.
@@ -139,6 +141,15 @@ public class ChatView extends SawimFragment implements OnUpdateChat, Handler.Cal
         });
     }
 
+    //iha01 Start
+    private void clearAvatarReady(Contact c) {
+        Vector<XmppContact.SubContact> subcontacts = ((XmppServiceContact) c).subcontacts;
+        for (XmppContact.SubContact item : subcontacts) {
+            item.avatarIsRead = false;
+        }
+    }
+    //iha01 End
+
     public void removeTitleBar() {
         if (chatBarLayout != null && chatBarLayout.getParent() != null)
             ((ViewGroup) chatBarLayout.getParent()).removeView(chatBarLayout);
@@ -210,7 +221,11 @@ public class ChatView extends SawimFragment implements OnUpdateChat, Handler.Cal
 
                 public void onDrawerOpened(View view) {
                     if (mucUsersView != null)
-                        mucUsersView.update();
+                        try {
+                            mucUsersView.update();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                 }
             };
             drawerLayout.setDrawerListener(drawerToggle);
@@ -251,7 +266,11 @@ public class ChatView extends SawimFragment implements OnUpdateChat, Handler.Cal
                         }
                     }.show(getFragmentManager().beginTransaction(), "auth");
                 } else {
-                    forceGoToChat(ChatHistory.instance.chatAt(ChatHistory.instance.getPreferredItem()));
+                    try {
+                        forceGoToChat(ChatHistory.instance.chatAt(ChatHistory.instance.getPreferredItem()));
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         });
@@ -456,7 +475,11 @@ public class ChatView extends SawimFragment implements OnUpdateChat, Handler.Cal
             if (currentContact != null)
                 initChat(currentContact.getProtocol(), currentContact);
         } else {
-            openChat(chat.getProtocol(), chat.getContact());
+            try {
+                openChat(chat.getProtocol(), chat.getContact());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
         if (SawimApplication.isManyPane()) {
             if (chat == null)
@@ -543,7 +566,7 @@ public class ChatView extends SawimFragment implements OnUpdateChat, Handler.Cal
         sharingText = text;
     }
 
-    private void forceGoToChat(Chat current) {
+    private void forceGoToChat(Chat current) throws InterruptedException {
         if (current == null) return;
         pause(chat);
         chatListView.stopScroll();
@@ -558,8 +581,9 @@ public class ChatView extends SawimFragment implements OnUpdateChat, Handler.Cal
         chat = p.getChat(c);
     }
 
-    public void openChat(Protocol p, Contact c) {
+    public void openChat(Protocol p, Contact c) throws InterruptedException {
         chatViewLayout.hideHint();
+        clearAvatarReady(c); //iha01
         initChat(p, c);
 
         boolean isNewChat = oldChat == null || !oldChat.equals(chat.getContact().getUserId());
@@ -602,7 +626,11 @@ public class ChatView extends SawimFragment implements OnUpdateChat, Handler.Cal
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 Object o = parent.getAdapter().getItem(position);
                                 if (o instanceof Chat) {
-                                    forceGoToChat((Chat) o);
+                                    try {
+                                        forceGoToChat((Chat) o);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
                                     dismiss();
                                 }
                             }
@@ -648,7 +676,7 @@ public class ChatView extends SawimFragment implements OnUpdateChat, Handler.Cal
         });
     }
 
-    private void initMucUsers() {
+    private void initMucUsers() throws InterruptedException {
         if (SawimApplication.isManyPane()) {
             nickList.setVisibility(View.VISIBLE);
         } else if (drawerLayout.isDrawerOpen(nickList)) {
@@ -699,7 +727,11 @@ public class ChatView extends SawimFragment implements OnUpdateChat, Handler.Cal
                 if (mucUsersView != null) {
                     if (SawimApplication.isManyPane()
                             || (drawerLayout != null && nickList != null && drawerLayout.isDrawerOpen(nickList))) {
-                        mucUsersView.update();
+                        try {
+                            mucUsersView.update();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
                 break;
@@ -1040,7 +1072,11 @@ public class ChatView extends SawimFragment implements OnUpdateChat, Handler.Cal
                     protocol.addTempContact(c);
                 }
                 pause(getCurrentChat());
-                openChat(protocol, c);
+                try {
+                    openChat(protocol, c);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 resume(getCurrentChat());
                 getActivity().supportInvalidateOptionsMenu();
                 break;
